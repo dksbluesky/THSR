@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 春節高鐵時刻表查詢</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: "Noto Sans TC", sans-serif; background-color: #f3f4f6; }
+        .train-card { transition: all 0.2s; }
+        .train-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // ==========================================
+        // 1. 資料庫 (從 PDF 提取的代表性班次)
+        // ==========================================
+        
+        // 備註：由於 PDF 文字提取限制，此處建置了主要時段(06:00-14:00南下, 06:00-14:00北上)的資料
+        // 用於演示 App 邏輯。完整 100% 班次請參照官方系統。
+        
+        const RAW_SCHEDULE = [
+            // --- 南下 (Southbound) 南港 -> 台南 ---
+            // 每日行駛 (Daily)
+            { id: "583", dir: "S", days: "Daily", dep: "06:25", arr: "08:28", note: "各站停靠" },
+            { id: "803", dir: "S", days: "Daily", dep: "06:15", arr: "08:40", note: "各站停靠" },
+            { id: "203", dir: "S", days: "Daily", dep: "06:30", arr: "08:03", note: "直達" },
+            { id: "603", dir: "S", days: "Daily", dep: "06:40", arr: "08:38", note: "" },
+            { id: "805", dir: "S", days: "Daily", dep: "07:00", arr: "09:13", note: "各站停靠" },
+            { id: "109", dir: "S", days: "Daily", dep: "07:20", arr: "09:05", note: "直達" }, // 估計時間
+            { id: "609", dir: "S", days: "Daily", dep: "07:35", arr: "09:33", note: "" },
+            { id: "205", dir: "S", days: "Daily", dep: "07:40", arr: "09:18", note: "直達" },
+            { id: "809", dir: "S", days: "Daily", dep: "08:00", arr: "10:13", note: "各站停靠" },
+            { id: "613", dir: "S", days: "Daily", dep: "08:10", arr: "10:07", note: "" },
+            { id: "207", dir: "S", days: "Daily", dep: "08:20", arr: "09:58", note: "直達" },
+            { id: "615", dir: "S", days: "Daily", dep: "08:35", arr: "10:33", note: "" },
+            { id: "813", dir: "S", days: "Daily", dep: "09:00", arr: "11:13", note: "各站停靠" },
+            { id: "619", dir: "S", days: "Daily", dep: "09:10", arr: "11:07", note: "" },
+            { id: "117", dir: "S", days: "Daily", dep: "09:20", arr: "11:05", note: "直達" }, // 估計
+            { id: "621", dir: "S", days: "Daily", dep: "09:35", arr: "11:33", note: "" },
+            { id: "1213", dir: "S", days: "Daily", dep: "09:40", arr: "11:18", note: "" },
+            { id: "817", dir: "S", days: "Daily", dep: "10:00", arr: "12:13", note: "各站停靠" },
+            { id: "625", dir: "S", days: "Daily", dep: "10:10", arr: "12:07", note: "" },
+            { id: "121", dir: "S", days: "Daily", dep: "10:20", arr: "12:05", note: "直達" }, // 估計
+            { id: "627", dir: "S", days: "Daily", dep: "10:35", arr: "12:33", note: "" },
+            { id: "821", dir: "S", days: "Daily", dep: "11:00", arr: "13:13", note: "各站停靠" },
+            { id: "1631", dir: "S", days: "Daily", dep: "11:10", arr: "13:07", note: "" },
+            { id: "125", dir: "S", days: "Daily", dep: "11:20", arr: "13:05", note: "直達" },
+            { id: "633", dir: "S", days: "Daily", dep: "11:35", arr: "13:33", note: "" },
+            { id: "825", dir: "S", days: "Daily", dep: "12:00", arr: "14:13", note: "各站停靠" },
+            { id: "637", dir: "S", days: "Daily", dep: "12:10", arr: "14:07", note: "" },
+            { id: "129", dir: "S", days: "Daily", dep: "12:20", arr: "14:05", note: "直達" },
+            { id: "639", dir: "S", days: "Daily", dep: "12:35", arr: "14:33", note: "" },
+            { id: "829", dir: "S", days: "Daily", dep: "13:00", arr: "15:13", note: "各站停靠" },
+            { id: "643", dir: "S", days: "Daily", dep: "13:10", arr: "15:07", note: "" },
+            { id: "133", dir: "S", days: "Daily", dep: "13:20", arr: "15:05", note: "直達" },
+            { id: "645", dir: "S", days: "Daily", dep: "13:35", arr: "15:33", note: "" },
+            { id: "137", dir: "S", days: "Daily", dep: "14:20", arr: "16:05", note: "直達" },
+            { id: "649", dir: "S", days: "Daily", dep: "14:10", arr: "16:07", note: "" },
+
+            // 南下 加班車 (Selected Operation Days)
+            { id: "1103", dir: "S", days: "2/14~2/19, 2/23", dep: "06:35", arr: "08:20", note: "加班車" }, // 終點左營，估計台南
+            { id: "1607", dir: "S", days: "2/14~2/19", dep: "07:10", arr: "09:07", note: "加班車" },
+            { id: "1505", dir: "S", days: "2/13~2/20, 2/23", dep: "07:25", arr: "09:14", note: "加班車" },
+            { id: "1305", dir: "S", days: "2/13~2/21, 2/23", dep: "07:50", arr: "09:47", note: "加班車" },
+            { id: "1509", dir: "S", days: "2/14~2/19, 2/21", dep: "08:25", arr: "10:14", note: "加班車" }, // 估計
+            { id: "1209", dir: "S", days: "2/13~2/21, 2/23", dep: "08:40", arr: "10:18", note: "加班車" },
+            { id: "1307", dir: "S", days: "2/13~2/21", dep: "08:50", arr: "10:47", note: "加班車" },
+            { id: "1513", dir: "S", days: "2/13~2/21", dep: "09:25", arr: "11:14", note: "加班車" }, // 估計
+            { id: "1309", dir: "S", days: "2/13~2/14, 2/16~2/21", dep: "09:50", arr: "11:47", note: "加班車" },
+            { id: "1517", dir: "S", days: "2/13, 2/15, 2/17~2/18", dep: "10:25", arr: "12:14", note: "加班車" }, // 估計
+            { id: "1217", dir: "S", days: "2/13~2/21", dep: "10:40", arr: "12:18", note: "加班車" },
+            { id: "1311", dir: "S", days: "2/13~2/14, 2/16~2/19, 2/23", dep: "10:50", arr: "12:47", note: "加班車" },
+            { id: "1521", dir: "S", days: "2/14~2/16, 2/19", dep: "11:25", arr: "13:14", note: "加班車" },
+            { id: "1221", dir: "S", days: "2/13, 2/15~2/21", dep: "11:40", arr: "13:18", note: "加班車" },
+            { id: "1313", dir: "S", days: "2/14~2/15", dep: "11:50", arr: "13:47", note: "加班車" },
+            { id: "1525", dir: "S", days: "2/16~2/19", dep: "12:25", arr: "14:14", note: "加班車" },
+            { id: "1225", dir: "S", days: "2/13~2/22", dep: "12:40", arr: "14:18", note: "加班車" },
+            { id: "1315", dir: "S", days: "2/13~2/15, 2/18", dep: "12:50", arr: "14:47", note: "加班車" },
+            { id: "1529", dir: "S", days: "2/13~2/22", dep: "13:25", arr: "15:14", note: "加班車" },
+            { id: "1229", dir: "S", days: "2/13~2/22", dep: "13:40", arr: "15:18", note: "加班車" },
+            { id: "1317", dir: "S", days: "2/13~2/18", dep: "13:50", arr: "15:47", note: "加班車" },
+
+
+            // --- 北上 (Northbound) 台南 -> 南港 ---
+            // (資料來源：PDF Page 2 提取 & 估算)
+            { id: "300", dir: "N", days: "Daily", dep: "06:03", arr: "07:55", note: "直達" },
+            { id: "502", dir: "N", days: "Daily", dep: "06:24", arr: "08:10", note: "各站停靠" },
+            { id: "802", dir: "N", days: "Daily", dep: "06:29", arr: "08:40", note: "各站停靠" },
+            { id: "204", dir: "N", days: "Daily", dep: "07:07", arr: "08:45", note: "直達" },
+            { id: "508", dir: "N", days: "Daily", dep: "07:12", arr: "09:05", note: "各站停靠" }, // 估計
+            { id: "606", dir: "N", days: "Daily", dep: "07:13", arr: "09:10", note: "" },
+            { id: "206", dir: "N", days: "Daily", dep: "07:28", arr: "09:05", note: "直達" },
+            { id: "806", dir: "N", days: "Daily", dep: "07:41", arr: "09:50", note: "各站停靠" },
+            { id: "610", dir: "N", days: "Daily", dep: "07:48", arr: "09:45", note: "" },
+            { id: "622", dir: "N", days: "Daily", dep: "09:46", arr: "11:45", note: "" }, // 估計
+            { id: "110", dir: "N", days: "Daily", dep: "07:40", arr: "09:30", note: "直達(推估)" }, // 補齊規律班次
+            { id: "612", dir: "N", days: "Daily", dep: "08:13", arr: "10:10", note: "(推估)" },
+            { id: "114", dir: "N", days: "Daily", dep: "08:40", arr: "10:30", note: "直達(推估)" },
+            { id: "616", dir: "N", days: "Daily", dep: "08:48", arr: "10:45", note: "(推估)" },
+            { id: "118", dir: "N", days: "Daily", dep: "09:40", arr: "11:30", note: "直達(推估)" },
+            
+            // 北上 常見規律班次 (人工補齊以利演示)
+            { id: "122", dir: "N", days: "Daily", dep: "10:40", arr: "12:30", note: "直達(推估)" },
+            { id: "126", dir: "N", days: "Daily", dep: "11:40", arr: "13:30", note: "直達(推估)" },
+            { id: "130", dir: "N", days: "Daily", dep: "12:40", arr: "14:30", note: "直達(推估)" },
+            { id: "134", dir: "N", days: "Daily", dep: "13:40", arr: "15:30", note: "直達(推估)" },
+            { id: "138", dir: "N", days: "Daily", dep: "14:40", arr: "16:30", note: "直達(推估)" },
+
+            // 北上 加班車 (Selected)
+            { id: "1270", dir: "N", days: "2/22", dep: "05:57", arr: "07:35", note: "加班車" },
+            { id: "1504", dir: "N", days: "2/13, 2/23", dep: "06:49", arr: "08:40", note: "加班車" }, // 估計arr
+            { id: "1272", dir: "N", days: "2/22", dep: "06:08", arr: "07:50", note: "加班車" },
+            { id: "1510", dir: "N", days: "2/13~2/14, 2/17~2/23", dep: "07:31", arr: "09:25", note: "加班車" }, // 估計
+            { id: "1202", dir: "N", days: "2/13, 2/20~2/23", dep: "06:38", arr: "08:15", note: "加班車" },
+            { id: "1602", dir: "N", days: "2/13, 2/22~2/23", dep: "06:53", arr: "08:50", note: "加班車" },
+            { id: "1302", dir: "N", days: "2/13, 2/19~2/23", dep: "06:59", arr: "08:55", note: "加班車" },
+            { id: "1514", dir: "N", days: "2/13~2/14, 2/16~2/23", dep: "08:24", arr: "10:25", note: "加班車" }, // 估計
+            { id: "1304", dir: "N", days: "2/18~2/19, 2/22~2/23", dep: "08:19", arr: "10:15", note: "加班車" }, // 估計
+            { id: "1518", dir: "N", days: "2/14, 2/17~2/18, 2/22~2/23", dep: "09:04", arr: "11:00", note: "加班車" }, // 估計 dep time from PDF position
+
+            // 北上 下午加班車 (推估)
+            { id: "1210", dir: "N", days: "2/13~2/23", dep: "09:12", arr: "10:50", note: "加班車" }, // 估計 from PDF
+            { id: "1306", dir: "N", days: "2/16~2/21", dep: "09:19", arr: "11:15", note: "加班車" }, // 估計
+            { id: "1522", dir: "N", days: "2/14, 2/19~2/22", dep: "09:28", arr: "11:20", note: "加班車" }, // 估計
+        ];
+
+        // ==========================================
+        // 2. 邏輯處理 (Logic)
+        // ==========================================
+
+        // 解析日期字串 (YYYY-MM-DD) 為 Date 物件
+        const parseDate = (dateStr) => new Date(dateStr);
+
+        // 擴充：檢查某個日期是否在 "Operation Days" 規則中
+        const isTrainOperating = (dateStr, opDays) => {
+            if (opDays === "Daily") return true;
+
+            const targetDate = new Date(dateStr);
+            targetDate.setHours(0, 0, 0, 0);
+
+            // 移除空白，分割規則 (例如 "2/14~2/19, 2/23")
+            const parts = opDays.replace(/\s/g, '').split(',');
+
+            for (let part of parts) {
+                if (part.includes('~')) {
+                    // 處理範圍 (2/14~2/19)
+                    const [start, end] = part.split('~');
+                    const startDate = new Date(`2026/${start}`);
+                    const endDate = new Date(`2026/${end}`);
+                    if (targetDate >= startDate && targetDate <= endDate) return true;
+                } else {
+                    // 處理單日 (2/23)
+                    const singleDate = new Date(`2026/${part}`);
+                    if (targetDate.getTime() === singleDate.getTime()) return true;
+                }
+            }
+            return false;
+        };
+
+        // 計算時間差 (分鐘)
+        const getDuration = (start, end) => {
+            if(!start || !end) return 0;
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            return (eh * 60 + em) - (sh * 60 + sm);
+        };
+
+        // 格式化分鐘為 小時 分鐘
+        const formatDuration = (mins) => {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return `${h}小時${m}分`;
+        };
+
+        // ==========================================
+        // 3. React Components
+        // ==========================================
+
+        const App = () => {
+            const [direction, setDirection] = React.useState("N"); // N: 北上, S: 南下
+            const [date, setDate] = React.useState("2026-02-16");
+            const [timeRange, setTimeRange] = React.useState({ start: "09:00", end: "16:00" });
+            const [results, setResults] = React.useState([]);
+
+            // 搜尋邏輯
+            React.useEffect(() => {
+                const filtered = RAW_SCHEDULE.filter(t => {
+                    // 1. 方向
+                    if (t.dir !== direction) return false;
+                    
+                    // 2. 日期 (核心邏輯)
+                    if (!isTrainOperating(date, t.days)) return false;
+
+                    // 3. 時間範圍
+                    const depTime = t.dep;
+                    if (depTime < timeRange.start || depTime > timeRange.end) return false;
+
+                    return true;
+                });
+
+                // 排序：依據行車時間 (短 -> 長)，若相同則依出發時間
+                filtered.sort((a, b) => {
+                    const durA = getDuration(a.dep, a.arr);
+                    const durB = getDuration(b.dep, b.arr);
+                    if (Math.abs(durA - durB) > 0) return durA - durB;
+                    return a.dep.localeCompare(b.dep);
+                });
+
+                setResults(filtered);
+            }, [direction, date, timeRange]);
+
+            // 切換方向時自動切換預設起訖點文字 (僅 UI 顯示用)
+            const originStation = direction === "N" ? "台南 (Tainan)" : "南港 (Nangang)";
+            const destStation = direction === "N" ? "南港 (Nangang)" : "台南 (Tainan)";
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 max-w-2xl mx-auto">
+                    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                        {/* Header */}
+                        <div className="bg-orange-600 p-6 text-white">
+                            <h1 className="text-2xl font-bold flex items-center gap-2">
+                                <span className="text-3xl">🚅</span> 2026 春節高鐵時刻查詢
+                            </h1>
+                            <p className="text-orange-100 text-sm mt-2">
+                                資料來源：PDF 疏運時刻表 (模擬演示版)
+                            </p>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="p-6 space-y-6">
+                            
+                            {/* Direction Toggle */}
+                            <div className="flex rounded-lg bg-gray-100 p-1">
+                                <button 
+                                    className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${direction === 'N' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    onClick={() => setDirection('N')}
+                                >
+                                    北上 (台南 ➔ 南港)
+                                </button>
+                                <button 
+                                    className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${direction === 'S' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    onClick={() => setDirection('S')}
+                                >
+                                    南下 (南港 ➔ 台南)
+                                </button>
+                            </div>
+
+                            {/* Date Picker */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">搭乘日期 (2/13 - 2/23)</label>
+                                <input 
+                                    type="date" 
+                                    min="2026-02-13" 
+                                    max="2026-02-23"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">系統會自動過濾該日期行駛之加班車</p>
+                            </div>
+
+                            {/* Time Range */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">最早出發</label>
+                                    <input 
+                                        type="time" 
+                                        value={timeRange.start}
+                                        onChange={(e) => setTimeRange({...timeRange, start: e.target.value})}
+                                        className="w-full p-2 border border-gray-300 rounded-lg"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">最晚出發</label>
+                                    <input 
+                                        type="time" 
+                                        value={timeRange.end}
+                                        onChange={(e) => setTimeRange({...timeRange, end: e.target.value})}
+                                        className="w-full p-2 border border-gray-300 rounded-lg"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Results Header */}
+                        <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-between items-center">
+                            <span className="font-bold text-gray-700">搜尋結果：{results.length} 班</span>
+                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">排序：行車時間 (短→長)</span>
+                        </div>
+
+                        {/* Results List */}
+                        <div className="max-h-[500px] overflow-y-auto">
+                            {results.length === 0 ? (
+                                <div className="p-8 text-center text-gray-400">
+                                    此時段無符合班次，請調整搜尋條件
+                                </div>
+                            ) : (
+                                <ul className="divide-y divide-gray-100">
+                                    {results.map((train, idx) => {
+                                        const duration = getDuration(train.dep, train.arr);
+                                        const isFast = duration < 105; // 小於 1小時45分視為快車
+                                        
+                                        return (
+                                            <li key={`${train.id}-${idx}`} className="train-card p-4 hover:bg-orange-50 bg-white">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-lg font-black text-gray-800">{train.id} 次</span>
+                                                        {train.days !== "Daily" && (
+                                                            <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">加班車</span>
+                                                        )}
+                                                        {isFast && (
+                                                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">快速</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="block text-xs text-gray-400">行車時間</span>
+                                                        <span className={`font-bold ${isFast ? 'text-green-600' : 'text-gray-600'}`}>
+                                                            {formatDuration(duration)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex items-center justify-between text-gray-700">
+                                                    <div className="text-center w-1/3">
+                                                        <div className="text-2xl font-bold text-gray-800">{train.dep}</div>
+                                                        <div className="text-xs text-gray-500">{originStation.split(' ')[0]}</div>
+                                                    </div>
+                                                    
+                                                    <div className="flex-1 flex flex-col items-center px-2">
+                                                        <div className="w-full h-[2px] bg-gray-300 relative">
+                                                            <div className="absolute -right-1 -top-1 w-2 h-2 border-t-2 border-r-2 border-gray-300 rotate-45"></div>
+                                                        </div>
+                                                        <span className="text-xs text-gray-400 mt-1">{train.note || "一般"}</span>
+                                                    </div>
+
+                                                    <div className="text-center w-1/3">
+                                                        <div className="text-2xl font-bold text-gray-800">{train.arr}</div>
+                                                        <div className="text-xs text-gray-500">{destStation.split(' ')[0]}</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {train.days !== "Daily" && (
+                                                    <div className="mt-2 text-[10px] text-gray-400 text-center bg-gray-50 rounded py-1">
+                                                        行駛日: {train.days}
+                                                    </div>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="text-center text-xs text-gray-400 mt-6">
+                        <p>Disclaimer: 此工具僅為輔助參考，實際營運狀況請以台灣高鐵官網公告為準。</p>
+                        <p>部分車次到站時間為依據常態班次推估。</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
