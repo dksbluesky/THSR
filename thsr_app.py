@@ -27,7 +27,8 @@ def find_header_and_clean(df_raw):
     """
     header_idx = -1
     for i, row in df_raw.head(20).iterrows():
-        row_str = " ".join(row.astype(str).values)
+        # 【修正】強制將每一個格子獨立轉為字串，徹底避免 NaN(float) 導致 join 失敗
+        row_str = " ".join([str(val) for val in row.values])
         if "車次" in row_str or "Train" in row_str:
             header_idx = i
             break
