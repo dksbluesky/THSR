@@ -689,9 +689,21 @@ function loadSheet(sheetName) {
     updateDateSelect();
 }
 
+function detectDirection(headers) {
+    const nangangIdx = headers.findIndex(h => h.includes('南港') || h.includes('Nangang'));
+    const southIdx   = headers.findIndex(h => h.includes('左營') || h.includes('Zuoying') || h.includes('台南') || h.includes('Tainan'));
+    if (nangangIdx === -1 || southIdx === -1) {
+        // Fall back to sheet name keyword
+        return (currentSheetName.includes('北上') || currentSheetName.toLowerCase().includes('northbound'))
+            ? 'northbound' : 'southbound';
+    }
+    return nangangIdx < southIdx ? 'southbound' : 'northbound';
+}
+
 function updateStationSelects() {
     const allCols = currentHeaders.filter(h => h && h !== 'null' && h !== 'undefined' && h.trim() !== '');
-    const isNorthbound = currentSheetName.includes('北上') || currentSheetName.toLowerCase().includes('northbound');
+    const direction = detectDirection(currentHeaders);
+    const isNorthbound = direction === 'northbound';
     let defaultStart = '南港', defaultEnd = '台南';
     if (isNorthbound) { defaultStart = '台南'; defaultEnd = '南港'; }
 
