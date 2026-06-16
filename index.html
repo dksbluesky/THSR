@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高鐵連假時刻查詢</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --primary: #1a56db;
+            --primary-light: #e8f0fe;
+            --border: #d1d5db;
+            --text: #111827;
+            --muted: #6b7280;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .header h1 { font-size: 1.2rem; font-weight: 700; }
+        .header .subtitle { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+        /* Upload Zone */
+        .upload-zone {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 40px 32px;
+            text-align: center;
+            border: 2px dashed var(--border);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .upload-zone .icon { font-size: 2.8rem; margin-bottom: 14px; }
+        .upload-zone h2 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .upload-zone p { color: var(--muted); font-size: 0.85rem; }
+        .upload-zone .upload-btn {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 10px 28px;
+            background: var(--primary);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .upload-zone .upload-btn:hover { background: #1e40af; }
+
+        .file-loaded-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        #fileInput { display: none; }
+
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 270px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 800px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
+        /* Sidebar */
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 16px;
+        }
+
+        .form-group { margin-bottom: 13px; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+
+        select, input[type="number"], input[type="time"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: var(--text);
+            background: white;
+            transition: border-color 0.15s;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+        }
+
+        .station-grid {
+            display: grid;
+            grid-template-columns: 1fr 22px 1fr;
+            gap: 6px;
+            align-items: end;
+        }
+        .station-arrow {
+            text-align: center;
+            font-size: 1rem;
+            padding-bottom: 9px;
+            color: var(--primary);
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .time-grid label { font-weight: 400; font-size: 0.78rem; }
+
+        .query-btn {
+            width: 100%;
+            padding: 11px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .query-btn:hover { background: #1e40af; }
+
+        /* Results */
+        .results-area { flex: 1; }
+
+        .results-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .results-header h2 { font-size: 1.05rem; font-weight: 700; }
+        .results-subtext { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
+
+        .count-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 4px 14px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .table-wrap { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+
+        thead th {
+            background: #f9fafb;
+            padding: 9px 14px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border);
+        }
+
+        tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: #fafafa; }
+        tbody td { padding: 10px 14px; vertical-align: middle; }
+
+        .train-no { font-weight: 700; font-size: 0.95rem; }
+        .time-val {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .dur-pill {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 99px;
+            font-weight: 700;
+            font-size: 0.82rem;
+        }
+
+        .remark-text { font-size: 0.78rem; color: var(--muted); }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+        .alert-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <span style="font-size:1.6rem">🚅</span>
+    <div>
+        <h1>高鐵連假時刻查詢</h1>
+        <div class="subtitle">上傳 Excel 時刻表，動態查詢班次</div>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Upload Zone -->
+    <div class="upload-zone" id="uploadZone">
+        <div class="icon">📂</div>
+        <h2>上傳高鐵時刻表 Excel 檔</h2>
+        <p>點擊選擇，或將 .xlsx 檔案拖曳至此</p>
+        <p style="margin-top:4px; font-size:0.78rem">由 batch_convert.py 產生的 Excel 格式</p>
+        <button class="upload-btn" id="uploadBtn">選擇 Excel 檔案</button>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx">
+
+    <!-- Main Layout (hidden until file loaded) -->
+    <div class="main-layout hidden" id="mainLayout">
+
+        <div class="sidebar">
+            <!-- Sheet & Year -->
+            <div class="card">
+                <div class="card-title">📋 時刻表設定</div>
+                <div class="form-group">
+                    <label>工作表（方向）</label>
+                    <select id="sheetSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label>年份</label>
+                    <input type="number" id="yearInput" min="2020" max="2060" step="1">
+                </div>
+            </div>
+
+            <!-- Stations -->
+            <div class="card">
+                <div class="card-title">🚉 起訖站</div>
+                <div class="station-grid">
+                    <div class="form-group" style="margin:0">
+                        <label>起點站</label>
+                        <select id="startStation"></select>
+                    </div>
+                    <div class="station-arrow">→</div>
+                    <div class="form-group" style="margin:0">
+                        <label>終點站</label>
+                        <select id="endStation"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date & Time -->
+            <div class="card">
+                <div class="card-title">📅 日期與時間</div>
+                <div class="form-group">
+                    <label>行駛日期</label>
+                    <select id="dateSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label>發車時間範圍</label>
+                    <div class="time-grid">
+                        <div>
+                            <label>最早發車</label>
+                            <input type="time" id="timeFrom" value="06:00">
+                        </div>
+                        <div>
+                            <label>最晚發車</label>
+                            <input type="time" id="timeTo" value="23:59">
+                        </div>
+                    </div>
+                </div>
+                <button class="query-btn" onclick="runQuery()">🔍 查詢班次</button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-area">
+            <div id="resultsContainer">
+                <div class="card">
+                    <div class="alert alert-info">
+                        ℹ️ 請在左側選擇查詢條件，然後點擊「查詢班次」開始查詢。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ==========================================
+// State
+// ==========================================
+let workbook = null;
+let currentHeaders = [];
+let currentData = [];
+let currentSheetName = '';
+
+const STATION_NAMES = ['南港','板橋','桃園','新竹','苗栗','台中','彰化','雲林','嘉義','台南','左營',
+                       'Nangang','Banqiao','Taoyuan','Hsinchu','Miaoli','Taichung','Changhua',
+                       'Yunlin','Chiayi','Tainan','Zuoying'];
+
+// ==========================================
+// Utility
+// ==========================================
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function formatDate(dt) {
+    return `${dt.getFullYear()}/${pad(dt.getMonth()+1)}/${pad(dt.getDate())}`;
+}
+
+function timeStrToMins(s) {
+    if (!s) return null;
+    const p = s.split(':').map(Number);
+    if (p.length < 2 || isNaN(p[0]) || isNaN(p[1])) return null;
+    return p[0] * 60 + p[1];
+}
+
+// Convert raw Excel cell value to "HH:MM" string
+function cellToTimeStr(val) {
+    if (val === null || val === undefined) return null;
+
+    if (typeof val === 'number') {
+        // Excel time is stored as fraction of day (0–1); datetimes have integer+fraction
+        const frac = val % 1;
+        const totalSec = Math.round(frac * 86400);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        return `${pad(h)}:${pad(m)}`;
+    }
+
+    const str = String(val).trim();
+    if (!str || str === '-' || str === 'nan' || str === 'null' || str === 'undefined') return null;
+
+    const match = str.match(/^(\d{1,2}):(\d{1,2})/);
+    if (match) return `${pad(parseInt(match[1]))}:${pad(parseInt(match[2]))}`;
+
+    return null;
+}
+
+// ==========================================
+// Header Detection
+// ==========================================
+function findHeaderAndClean(rawData) {
+    const limit = Math.min(20, rawData.length);
+    let headerIdx = -1;
+
+    for (let i = 0; i < limit; i++) {
+        const rowStr = (rawData[i] || []).map(v => String(v ?? '')).join(' ');
+        if (rowStr.includes('車次') || rowStr.includes('Train')) {
+            headerIdx = i;
+            break;
+        }
+    }
+
+    if (headerIdx === -1) return { headers: rawData[0] || [], data: rawData.slice(1) };
+
+    const headers = (rawData[headerIdx] || []).map(v =>
+        String(v ?? '').replace(/[\n\r]/g, '').trim()
+    );
+    return { headers, data: rawData.slice(headerIdx + 1) };
+}
+
+// ==========================================
+// Date Extraction from 行駛日 column
+// ==========================================
+function extractValidDates(data, headers, year) {
+    const dayColIdx = headers.findIndex(h => h && (h.includes('行駛日') || h.includes('Day')));
+    const datesSet = new Set();
+
+    if (dayColIdx === -1) {
+        return [formatDate(new Date())];
+    }
+
+    for (const row of data) {
+        if (!row) continue;
+        const raw = row[dayColIdx];
+        if (raw === null || raw === undefined) continue;
+
+        const val = String(raw).trim();
+        if (!val || val === '每日' || val === '-' || val === 'nan' || val === 'null' || val === 'NaT') continue;
+
+        const parts = val.replace(/\s/g, '').replace(/[～~]/g, '-').split(',');
+        for (const part of parts) {
+            if (part.includes('-')) {
+                try {
+                    const dash = part.indexOf('-');
+                    const [sm, sd] = part.slice(0, dash).split('/').map(Number);
+                    const [em, ed] = part.slice(dash + 1).split('/').map(Number);
+                    if ([sm, sd, em, ed].some(isNaN)) continue;
+
+                    let s = new Date(year, sm - 1, sd);
+                    let e = new Date(year, em - 1, ed);
+                    if (e < s) e = new Date(year + 1, em - 1, ed);
+
+                    const days = Math.round((e - s) / 86400000);
+                    for (let i = 0; i <= days; i++) {
+                        datesSet.add(formatDate(new Date(s.getTime() + i * 86400000)));
+                    }
+                } catch(_) {}
+            } else {
+                try {
+                    const [m, d] = part.split('/').map(Number);
+                    if (!isNaN(m) && !isNaN(d)) {
+                        datesSet.add(formatDate(new Date(year, m - 1, d)));
+                    }
+                } catch(_) {}
+            }
+        }
+    }
+
+    if (datesSet.size === 0) {
+        // Fallback: ±7 days from today with target year
+        const base = new Date();
+        base.setFullYear(year);
+        const result = [];
+        for (let i = -7; i <= 7; i++) result.push(formatDate(new Date(base.getTime() + i * 86400000)));
+        return result;
+    }
+
+    return [...datesSet].sort();
+}
+
+// ==========================================
+// Operating Day Check
+// ==========================================
+function isTrainOperating(dateStr, opDayStr) {
+    const s = String(opDayStr ?? '').trim();
+    if (!s || s === 'null' || s === 'nan' || s === 'undefined') return true;
+    if (s.includes('每日')) return true;
+
+    const [, mm, dd] = dateStr.split('/').map(Number);
+    const selVal = mm * 100 + dd;
+
+    const parts = s.replace(/\s/g, '').replace(/[～~]/g, '-').split(',');
+    for (const part of parts) {
+        if (part.includes('-')) {
+            try {
+                const dash = part.indexOf('-');
+                const parseMD = t => { const [a, b] = t.split('/').map(Number); return a * 100 + b; };
+                const sv = parseMD(part.slice(0, dash));
+                const ev = parseMD(part.slice(dash + 1));
+                if (isNaN(sv) || isNaN(ev)) continue;
+                if (sv > ev) { // cross-year range
+                    if (selVal >= sv || selVal <= ev) return true;
+                } else {
+                    if (selVal >= sv && selVal <= ev) return true;
+                }
+            } catch(_) {}
+        } else {
+            const [pm, pd] = part.split('/').map(Number);
+            if (!isNaN(pm) && !isNaN(pd) && pm * 100 + pd === selVal) return true;
+        }
+    }
+    return false;
+}
+
+// ==========================================
+// Duration
+// ==========================================
+function calcDuration(tStart, tEnd) {
+    const s = timeStrToMins(cellToTimeStr(tStart));
+    const e = timeStrToMins(cellToTimeStr(tEnd));
+    if (s === null || e === null) return 9999;
+    let diff = e - s;
+    if (diff < 0) diff += 1440;
+    return diff;
+}
+
+// ==========================================
+// Load Sheet
+// ==========================================
+function loadSheet(sheetName) {
+    if (!workbook) return;
+    const ws = workbook.Sheets[sheetName];
+    const rawData = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+    const { headers, data } = findHeaderAndClean(rawData);
+    currentHeaders = headers;
+    currentData = data;
+    currentSheetName = sheetName;
+    updateStationSelects();
+    updateDateSelect();
+}
+
+function updateStationSelects() {
+    const allCols = currentHeaders.filter(h => h && h !== 'null' && h !== 'undefined' && h.trim() !== '');
+
+    let defaultStart = '南港';
+    let defaultEnd = '台南';
+    if (currentSheetName.includes('北上') || currentSheetName.toLowerCase().includes('northbound')) {
+        defaultStart = '台南';
+        defaultEnd = '南港';
+    }
+
+    ['startStation', 'endStation'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        allCols.forEach(col => sel.add(new Option(col, col)));
+    });
+
+    const startSel = document.getElementById('startStation');
+    const endSel = document.getElementById('endStation');
+
+    const sIdx = allCols.findIndex(c => c.includes(defaultStart));
+    const eIdx = allCols.findIndex(c => c.includes(defaultEnd));
+    if (sIdx >= 0) startSel.selectedIndex = sIdx;
+    if (eIdx >= 0) endSel.selectedIndex = eIdx;
+}
+
+function updateDateSelect() {
+    const year = parseInt(document.getElementById('yearInput').value) || new Date().getFullYear();
+    const dates = extractValidDates(currentData, currentHeaders, year);
+
+    const sel = document.getElementById('dateSelect');
+    sel.innerHTML = '';
+    dates.forEach(d => sel.add(new Option(d, d)));
+
+    // Select today or first future date
+    const todayStr = formatDate(new Date());
+    const idx = dates.findIndex(d => d >= todayStr);
+    if (idx >= 0) sel.selectedIndex = idx;
+}
+
+// ==========================================
+// Duration Color (green → yellow → red)
+// ==========================================
+function durColor(mins, minDur, maxDur) {
+    const range = Math.max(maxDur - minDur, 1);
+    const ratio = (mins - minDur) / range;
+    let r, g, b;
+    if (ratio <= 0.5) {
+        const t = ratio * 2;
+        r = Math.round(5 + (250 - 5) * t);
+        g = Math.round(150 + (180 - 150) * t);
+        b = Math.round(105 + (20 - 105) * t);
+    } else {
+        const t = (ratio - 0.5) * 2;
+        r = Math.round(250 + (220 - 250) * t);
+        g = Math.round(180 + (40 - 180) * t);
+        b = Math.round(20 + (40 - 20) * t);
+    }
+    return {
+        bg: `rgba(${r},${g},${b},0.15)`,
+        fg: `rgb(${Math.round(r*0.65)},${Math.round(g*0.65)},${Math.round(b*0.65)})`
+    };
+}
+
+// ==========================================
+// Query
+// ==========================================
+function runQuery() {
+    const startStation = document.getElementById('startStation').value;
+    const endStation   = document.getElementById('endStation').value;
+    const selectedDate = document.getElementById('dateSelect').value;
+    const timeFrom     = document.getElementById('timeFrom').value;
+    const timeTo       = document.getElementById('timeTo').value;
+
+    const fromMins = timeStrToMins(timeFrom);
+    const toMins   = timeStrToMins(timeTo);
+
+    const startIdx  = currentHeaders.indexOf(startStation);
+    const endIdx    = currentHeaders.indexOf(endStation);
+    const trainIdx  = currentHeaders.findIndex(h => h && (h.includes('車次') || h.includes('Train')));
+    const dayColIdx = currentHeaders.findIndex(h => h && (h.includes('行駛日') || h.includes('Day')));
+
+    if (startIdx === -1 || endIdx === -1) {
+        showMsg('error', '找不到所選的起訖站欄位，請確認欄位名稱。');
+        return;
+    }
+    if (trainIdx === -1) {
+        showMsg('error', '找不到「車次」欄位，請檢查 Excel 表頭格式。');
+        return;
+    }
+
+    const results = [];
+
+    for (const row of currentData) {
+        if (!row) continue;
+
+        const trainNo = row[trainIdx];
+        const trainStr = String(trainNo ?? '').trim();
+        if (!trainStr || trainStr === 'null' || trainStr === currentHeaders[trainIdx]) continue;
+
+        const tStart = row[startIdx];
+        const tEnd   = row[endIdx];
+        const tStartStr = cellToTimeStr(tStart);
+        const tEndStr   = cellToTimeStr(tEnd);
+
+        if (!tStartStr || !tEndStr) continue;
+
+        // Operating day check
+        const opDay = dayColIdx >= 0 && row[dayColIdx] != null ? String(row[dayColIdx]) : '每日';
+        if (!isTrainOperating(selectedDate, opDay)) continue;
+
+        // Time range check
+        const startMins = timeStrToMins(tStartStr);
+        if (startMins === null) continue;
+        if (fromMins !== null && startMins < fromMins) continue;
+        if (toMins   !== null && startMins > toMins)   continue;
+
+        // Duration check (≤ 120 min only)
+        const duration = calcDuration(tStart, tEnd);
+        if (duration > 120) continue;
+
+        results.push({
+            trainNo: trainStr,
+            dep: tStartStr,
+            arr: tEndStr,
+            dur: duration,
+            remark: (opDay !== '每日' && !opDay.includes('nan')) ? opDay : ''
+        });
+    }
+
+    results.sort((a, b) => a.dep.localeCompare(b.dep));
+    renderResults(results, selectedDate, startStation, endStation);
+}
+
+// ==========================================
+// Render
+// ==========================================
+function renderResults(results, date, from, to) {
+    const container = document.getElementById('resultsContainer');
+
+    if (results.length === 0) {
+        container.innerHTML = `<div class="card"><div class="alert alert-warning">
+            ⚠️ 找不到符合條件的班次。請嘗試調整日期或時間範圍。
+        </div></div>`;
+        return;
+    }
+
+    const minDur = Math.min(...results.map(r => r.dur));
+    const maxDur = Math.max(...results.map(r => r.dur));
+
+    const rows = results.map(r => {
+        const c = durColor(r.dur, minDur, maxDur);
+        return `<tr>
+            <td class="train-no">${r.trainNo}</td>
+            <td class="time-val">${r.dep}</td>
+            <td class="time-val">${r.arr}</td>
+            <td>
+                <span class="dur-pill" style="background:${c.bg};color:${c.fg}">
+                    ${r.dur} 分
+                </span>
+            </td>
+            <td class="remark-text">${r.remark || '每日'}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `<div class="card">
+        <div class="results-header">
+            <div>
+                <h2>🚅 ${from} → ${to}</h2>
+                <div class="results-subtext">${date} · 直達/快車（行車時間 ≤ 120 分）</div>
+            </div>
+            <span class="count-badge">${results.length} 班次</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>車次</th>
+                        <th>發車時間</th>
+                        <th>抵達時間</th>
+                        <th>行車時間</th>
+                        <th>行駛日</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function showMsg(type, msg) {
+    document.getElementById('resultsContainer').innerHTML =
+        `<div class="card"><div class="alert alert-${type}">${msg}</div></div>`;
+}
+
+// ==========================================
+// File Handling
+// ==========================================
+function handleFile(file) {
+    if (!file || !file.name.toLowerCase().endsWith('.xlsx')) {
+        alert('請選擇 .xlsx 格式的 Excel 檔案');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            workbook = XLSX.read(e.target.result, { type: 'array', raw: true });
+
+            const sheetSel = document.getElementById('sheetSelect');
+            sheetSel.innerHTML = '';
+            workbook.SheetNames.forEach(name => sheetSel.add(new Option(name, name)));
+
+            document.getElementById('yearInput').value = new Date().getFullYear();
+            loadSheet(workbook.SheetNames[0]);
+
+            document.getElementById('mainLayout').classList.remove('hidden');
+
+            // Update upload zone to show loaded state
+            const zone = document.getElementById('uploadZone');
+            zone.innerHTML = `
+                <div class="file-loaded-info">✅ ${file.name}</div>
+                <p style="font-size:0.82rem;color:var(--muted)">點擊此處更換檔案</p>`;
+
+        } catch(err) {
+            alert('讀取 Excel 失敗：' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Wire up upload zone click → file input
+document.getElementById('uploadZone').addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+});
+document.getElementById('uploadBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('sheetSelect').addEventListener('change', function() {
+    loadSheet(this.value);
+    showMsg('info', '已切換工作表，請點擊「查詢班次」重新查詢。');
+});
+
+document.getElementById('yearInput').addEventListener('change', updateDateSelect);
+</script>
+
+</body>
+</html>
