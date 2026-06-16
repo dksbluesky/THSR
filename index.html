@@ -3,152 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚅🚅高鐵連假時刻查詢</title>
+    <title>高鐵連假時刻查詢</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #f0f2f5;
-            --card: #ffffff;
-            --primary: #1a56db;
-            --primary-light: #e8f0fe;
-            --border: #d1d5db;
-            --text: #111827;
-            --muted: #6b7280;
-            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --orange:      #f97316;
+            --orange-dk:   #ea580c;
+            --orange-lt:   #fff7ed;
+            --orange-mid:  #fed7aa;
+            --navy:        #0f172a;
+            --navy-mid:    #1e293b;
+            --bg:          #f5f4f0;
+            --card:        #ffffff;
+            --border:      #e5e7eb;
+            --border-dk:   #d1d5db;
+            --text:        #111827;
+            --muted:       #6b7280;
+            --green:       #16a34a;
+            --green-lt:    #dcfce7;
+            --amber:       #d97706;
+            --amber-lt:    #fef3c7;
+            --red:         #dc2626;
+            --red-lt:      #fee2e2;
+            --shadow-sm:   0 1px 2px rgba(0,0,0,0.06);
+            --shadow:      0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
         }
 
+        /* ── Header ── */
         .header {
-            background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
+            background: var(--navy);
             color: white;
-            padding: 16px 24px;
+            padding: 0 28px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            gap: 16px;
+            height: 64px;
+            position: relative;
+            overflow: hidden;
         }
-        .header h1 { font-size: 1.2rem; font-weight: 700; }
-        .header .subtitle { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+        .header::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 5px;
+            background: var(--orange);
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            right: -40px; top: 50%;
+            transform: translateY(-50%);
+            width: 320px; height: 200px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(249,115,22,0.06) 0px,
+                rgba(249,115,22,0.06) 2px,
+                transparent 2px,
+                transparent 28px
+            );
+            pointer-events: none;
+        }
+        .header-icon {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+        .header h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .header .subtitle {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+            letter-spacing: 0.03em;
+        }
+        .header-badge {
+            margin-left: auto;
+            background: var(--orange);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 99px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            z-index: 1;
+        }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 28px 20px; }
 
-        /* Upload Zone */
+        /* ── Upload Zone ── */
         .upload-zone {
             background: var(--card);
-            border-radius: 12px;
-            padding: 40px 32px;
+            border-radius: 16px;
+            padding: 48px 32px;
             text-align: center;
-            border: 2px dashed var(--border);
+            border: 2px dashed var(--border-dk);
             cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
             box-shadow: var(--shadow);
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
         .upload-zone:hover, .upload-zone.dragover {
-            border-color: var(--primary);
-            background: var(--primary-light);
+            border-color: var(--orange);
+            background: var(--orange-lt);
+            transform: translateY(-1px);
         }
-        .upload-zone .icon { font-size: 2.8rem; margin-bottom: 14px; }
-        .upload-zone h2 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
-        .upload-zone p { color: var(--muted); font-size: 0.85rem; }
-        .upload-zone .upload-btn {
+        .upload-icon {
+            width: 72px; height: 72px;
+            background: var(--orange-lt);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+            border: 2px solid var(--orange-mid);
+            transition: transform 0.2s;
+        }
+        .upload-zone:hover .upload-icon { transform: scale(1.08); }
+        .upload-zone h2 {
+            font-size: 1.05rem; font-weight: 700;
+            color: var(--text); margin-bottom: 6px;
+        }
+        .upload-zone p { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
+        .upload-btn {
             display: inline-block;
-            margin-top: 18px;
-            padding: 10px 28px;
-            background: var(--primary);
+            margin-top: 22px;
+            padding: 11px 32px;
+            background: var(--orange);
             color: white;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 700;
             border: none;
             cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: background 0.15s, transform 0.1s;
         }
-        .upload-zone .upload-btn:hover { background: #1e40af; }
+        .upload-btn:hover { background: var(--orange-dk); transform: translateY(-1px); }
 
-        .file-loaded-info {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 8px;
+        .file-loaded {
+            display: flex; align-items: center; gap: 10px;
+            justify-content: center;
+            padding: 10px 20px;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1.5px solid #86efac;
+            border-radius: 10px;
+            font-size: 0.88rem; font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .file-loaded-dot {
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
         }
 
         #fileInput { display: none; }
 
-        /* Main Layout */
+        /* ── Layout ── */
         .main-layout {
             display: grid;
-            grid-template-columns: 270px 1fr;
+            grid-template-columns: 260px 1fr;
             gap: 20px;
             align-items: start;
         }
-        @media (max-width: 800px) {
+        @media (max-width: 820px) {
             .main-layout { grid-template-columns: 1fr; }
         }
 
-        /* Sidebar */
-        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+        /* ── Sidebar ── */
+        .sidebar { display: flex; flex-direction: column; gap: 14px; }
 
         .card {
             background: var(--card);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 14px;
+            padding: 18px 18px 20px;
             box-shadow: var(--shadow);
+            border: 1px solid var(--border);
         }
 
         .card-title {
-            font-size: 0.75rem;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: var(--muted);
+            color: var(--orange);
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
             margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-title-dot {
+            width: 6px; height: 6px;
+            background: var(--orange);
+            border-radius: 50%;
         }
 
-        .form-group { margin-bottom: 13px; }
+        .form-group { margin-bottom: 12px; }
         .form-group:last-child { margin-bottom: 0; }
 
         label {
             display: block;
-            font-size: 0.82rem;
-            font-weight: 600;
+            font-size: 0.78rem;
+            font-weight: 700;
             color: var(--muted);
             margin-bottom: 5px;
+            letter-spacing: 0.03em;
         }
 
         select, input[type="number"], input[type="time"] {
             width: 100%;
             padding: 8px 10px;
-            border: 1px solid var(--border);
+            border: 1.5px solid var(--border-dk);
             border-radius: 8px;
             font-size: 0.88rem;
+            font-family: inherit;
             color: var(--text);
             background: white;
-            transition: border-color 0.15s;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            appearance: auto;
         }
         select:focus, input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+            border-color: var(--orange);
+            box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
         }
 
         .station-grid {
             display: grid;
-            grid-template-columns: 1fr 22px 1fr;
+            grid-template-columns: 1fr 20px 1fr;
             gap: 6px;
             align-items: end;
         }
@@ -156,103 +251,189 @@
             text-align: center;
             font-size: 1rem;
             padding-bottom: 9px;
-            color: var(--primary);
+            color: var(--orange);
+            font-weight: 700;
         }
 
-        .time-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        .time-grid label { font-weight: 400; font-size: 0.78rem; }
+        .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
         .query-btn {
             width: 100%;
-            padding: 11px;
-            background: var(--primary);
+            padding: 12px;
+            background: var(--orange);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
-            transition: background 0.15s;
+            letter-spacing: 0.03em;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            box-shadow: 0 2px 8px rgba(249,115,22,0.3);
         }
-        .query-btn:hover { background: #1e40af; }
+        .query-btn:hover {
+            background: var(--orange-dk);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+        }
+        .query-btn:active { transform: translateY(0); }
 
-        /* Results */
-        .results-area { flex: 1; }
+        /* ── Alerts ── */
+        .alert {
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+        .alert-info {
+            background: #eff6ff; color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .alert-warning {
+            background: #fffbeb; color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .alert-error {
+            background: #fef2f2; color: #991b1b;
+            border: 1px solid #fecaca;
+        }
 
-        .results-header {
+        /* ── Results ── */
+        .results-board {
+            background: var(--card);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .board-header {
+            background: var(--navy);
+            color: white;
+            padding: 16px 20px;
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
             gap: 12px;
-            flex-wrap: wrap;
         }
-        .results-header h2 { font-size: 1.05rem; font-weight: 700; }
-        .results-subtext { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
-
-        .count-badge {
-            background: var(--primary-light);
-            color: var(--primary);
+        .board-route {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .board-route-arrow {
+            color: var(--orange);
+            font-size: 1.1rem;
+        }
+        .board-meta {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.55);
+            margin-top: 4px;
+            letter-spacing: 0.02em;
+        }
+        .board-count {
+            background: var(--orange);
+            color: white;
+            font-size: 0.78rem;
+            font-weight: 700;
             padding: 4px 14px;
             border-radius: 99px;
-            font-size: 0.8rem;
-            font-weight: 700;
             white-space: nowrap;
+            letter-spacing: 0.03em;
         }
 
-        .table-wrap { overflow-x: auto; }
+        .train-table { width: 100%; border-collapse: collapse; }
 
-        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-
-        thead th {
-            background: #f9fafb;
-            padding: 9px 14px;
+        .train-table thead th {
+            background: #f8f7f4;
+            padding: 9px 16px;
             text-align: left;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 700;
             color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 2px solid var(--border);
+            letter-spacing: 0.07em;
+            border-bottom: 1px solid var(--border);
         }
 
-        tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
-        tbody tr:last-child { border-bottom: none; }
-        tbody tr:hover { background: #fafafa; }
-        tbody td { padding: 10px 14px; vertical-align: middle; }
+        .train-row {
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.12s;
+            cursor: default;
+        }
+        .train-row:last-child { border-bottom: none; }
+        .train-row:hover { background: #fafaf9; }
+        .train-row td { padding: 11px 16px; vertical-align: middle; }
 
-        .train-no { font-weight: 700; font-size: 0.95rem; }
-        .time-val {
+        .train-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            background: var(--navy);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .train-badge.express { background: var(--orange); }
+
+        .time-display {
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-size: 0.95rem;
-            font-weight: 600;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy-mid);
+            letter-spacing: 0.04em;
+        }
+
+        .route-line {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            color: #d1d5db;
+            font-size: 0.75rem;
+            letter-spacing: -1px;
+            padding: 0 4px;
+        }
+
+        .dur-wrap { display: flex; flex-direction: column; gap: 4px; }
+        .dur-chip {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
             letter-spacing: 0.02em;
         }
-
-        .dur-pill {
-            display: inline-block;
-            padding: 3px 12px;
+        .dur-bar-track {
+            height: 3px;
+            background: #f3f4f6;
             border-radius: 99px;
+            width: 80px;
+            overflow: hidden;
+        }
+        .dur-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+
+        .days-chip {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 0.75rem;
             font-weight: 700;
-            font-size: 0.82rem;
+            background: #f3f4f6;
+            color: var(--muted);
+            letter-spacing: 0.02em;
         }
-
-        .remark-text { font-size: 0.78rem; color: var(--muted); }
-
-        /* Alerts */
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            line-height: 1.5;
+        .days-chip.special {
+            background: var(--orange-lt);
+            color: var(--orange-dk);
         }
-        .alert-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-        .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
         .hidden { display: none !important; }
     </style>
@@ -260,32 +441,32 @@
 <body>
 
 <div class="header">
-    <span style="font-size:1.6rem">🚅</span>
+    <div class="header-icon">🚅</div>
     <div>
         <h1>高鐵連假時刻查詢</h1>
-        <div class="subtitle">上傳 Excel 時刻表，動態查詢班次</div>
+        <div class="subtitle">上傳 Excel 時刻表，動態查詢直達班次</div>
     </div>
+    <span class="header-badge">Taiwan HSR</span>
 </div>
 
 <div class="container">
 
-    <!-- Upload Zone -->
     <div class="upload-zone" id="uploadZone">
-        <div class="icon">📂</div>
+        <div class="upload-icon">📂</div>
         <h2>上傳高鐵時刻表 Excel 檔</h2>
-        <p>點擊選擇，或將 .xlsx 檔案拖曳至此</p>
-        <p style="margin-top:4px; font-size:0.78rem">由 batch_convert.py 產生的 Excel 格式</p>
+        <p>點擊選擇，或將 .xlsx 檔案拖曳至此<br>由 batch_convert.py 產生的格式</p>
         <button class="upload-btn" id="uploadBtn">選擇 Excel 檔案</button>
     </div>
     <input type="file" id="fileInput" accept=".xlsx">
 
-    <!-- Main Layout (hidden until file loaded) -->
     <div class="main-layout hidden" id="mainLayout">
 
         <div class="sidebar">
-            <!-- Sheet & Year -->
             <div class="card">
-                <div class="card-title">📋 時刻表設定</div>
+                <div class="card-title">
+                    <span class="card-title-dot"></span>
+                    時刻表設定
+                </div>
                 <div class="form-group">
                     <label>工作表（方向）</label>
                     <select id="sheetSelect"></select>
@@ -296,9 +477,11 @@
                 </div>
             </div>
 
-            <!-- Stations -->
             <div class="card">
-                <div class="card-title">🚉 起訖站</div>
+                <div class="card-title">
+                    <span class="card-title-dot"></span>
+                    起訖站
+                </div>
                 <div class="station-grid">
                     <div class="form-group" style="margin:0">
                         <label>起點站</label>
@@ -312,9 +495,11 @@
                 </div>
             </div>
 
-            <!-- Date & Time -->
             <div class="card">
-                <div class="card-title">📅 日期與時間</div>
+                <div class="card-title">
+                    <span class="card-title-dot"></span>
+                    日期與時間
+                </div>
                 <div class="form-group">
                     <label>行駛日期</label>
                     <select id="dateSelect"></select>
@@ -323,25 +508,24 @@
                     <label>發車時間範圍</label>
                     <div class="time-grid">
                         <div>
-                            <label>最早發車</label>
+                            <label style="font-weight:400">最早發車</label>
                             <input type="time" id="timeFrom" value="06:00">
                         </div>
                         <div>
-                            <label>最晚發車</label>
+                            <label style="font-weight:400">最晚發車</label>
                             <input type="time" id="timeTo" value="23:59">
                         </div>
                     </div>
                 </div>
-                <button class="query-btn" onclick="runQuery()">🔍 查詢班次</button>
+                <button class="query-btn" onclick="runQuery()">查詢班次</button>
             </div>
         </div>
 
-        <!-- Results -->
-        <div class="results-area">
+        <div>
             <div id="resultsContainer">
                 <div class="card">
                     <div class="alert alert-info">
-                        ℹ️ 請在左側選擇查詢條件，然後點擊「查詢班次」開始查詢。
+                        請在左側選擇查詢條件，然後點擊「查詢班次」開始查詢。
                     </div>
                 </div>
             </div>
@@ -351,9 +535,6 @@
 </div>
 
 <script>
-// ==========================================
-// State
-// ==========================================
 let workbook = null;
 let currentHeaders = [];
 let currentData = [];
@@ -363,9 +544,6 @@ const STATION_NAMES = ['南港','板橋','桃園','新竹','苗栗','台中','�
                        'Nangang','Banqiao','Taoyuan','Hsinchu','Miaoli','Taichung','Changhua',
                        'Yunlin','Chiayi','Tainan','Zuoying'];
 
-// ==========================================
-// Utility
-// ==========================================
 function pad(n) { return String(n).padStart(2, '0'); }
 
 function formatDate(dt) {
@@ -379,70 +557,44 @@ function timeStrToMins(s) {
     return p[0] * 60 + p[1];
 }
 
-// Convert raw Excel cell value to "HH:MM" string
 function cellToTimeStr(val) {
     if (val === null || val === undefined) return null;
-
     if (typeof val === 'number') {
-        // Excel time is stored as fraction of day (0–1); datetimes have integer+fraction
         const frac = val % 1;
         const totalSec = Math.round(frac * 86400);
         const h = Math.floor(totalSec / 3600);
         const m = Math.floor((totalSec % 3600) / 60);
         return `${pad(h)}:${pad(m)}`;
     }
-
     const str = String(val).trim();
     if (!str || str === '-' || str === 'nan' || str === 'null' || str === 'undefined') return null;
-
     const match = str.match(/^(\d{1,2}):(\d{1,2})/);
     if (match) return `${pad(parseInt(match[1]))}:${pad(parseInt(match[2]))}`;
-
     return null;
 }
 
-// ==========================================
-// Header Detection
-// ==========================================
 function findHeaderAndClean(rawData) {
     const limit = Math.min(20, rawData.length);
     let headerIdx = -1;
-
     for (let i = 0; i < limit; i++) {
         const rowStr = (rawData[i] || []).map(v => String(v ?? '')).join(' ');
-        if (rowStr.includes('車次') || rowStr.includes('Train')) {
-            headerIdx = i;
-            break;
-        }
+        if (rowStr.includes('車次') || rowStr.includes('Train')) { headerIdx = i; break; }
     }
-
     if (headerIdx === -1) return { headers: rawData[0] || [], data: rawData.slice(1) };
-
-    const headers = (rawData[headerIdx] || []).map(v =>
-        String(v ?? '').replace(/[\n\r]/g, '').trim()
-    );
+    const headers = (rawData[headerIdx] || []).map(v => String(v ?? '').replace(/[\n\r]/g, '').trim());
     return { headers, data: rawData.slice(headerIdx + 1) };
 }
 
-// ==========================================
-// Date Extraction from 行駛日 column
-// ==========================================
 function extractValidDates(data, headers, year) {
     const dayColIdx = headers.findIndex(h => h && (h.includes('行駛日') || h.includes('Day')));
     const datesSet = new Set();
-
-    if (dayColIdx === -1) {
-        return [formatDate(new Date())];
-    }
-
+    if (dayColIdx === -1) return [formatDate(new Date())];
     for (const row of data) {
         if (!row) continue;
         const raw = row[dayColIdx];
         if (raw === null || raw === undefined) continue;
-
         const val = String(raw).trim();
         if (!val || val === '每日' || val === '-' || val === 'nan' || val === 'null' || val === 'NaT') continue;
-
         const parts = val.replace(/\s/g, '').replace(/[～~]/g, '-').split(',');
         for (const part of parts) {
             if (part.includes('-')) {
@@ -451,50 +603,36 @@ function extractValidDates(data, headers, year) {
                     const [sm, sd] = part.slice(0, dash).split('/').map(Number);
                     const [em, ed] = part.slice(dash + 1).split('/').map(Number);
                     if ([sm, sd, em, ed].some(isNaN)) continue;
-
                     let s = new Date(year, sm - 1, sd);
                     let e = new Date(year, em - 1, ed);
                     if (e < s) e = new Date(year + 1, em - 1, ed);
-
                     const days = Math.round((e - s) / 86400000);
-                    for (let i = 0; i <= days; i++) {
-                        datesSet.add(formatDate(new Date(s.getTime() + i * 86400000)));
-                    }
+                    for (let i = 0; i <= days; i++) datesSet.add(formatDate(new Date(s.getTime() + i * 86400000)));
                 } catch(_) {}
             } else {
                 try {
                     const [m, d] = part.split('/').map(Number);
-                    if (!isNaN(m) && !isNaN(d)) {
-                        datesSet.add(formatDate(new Date(year, m - 1, d)));
-                    }
+                    if (!isNaN(m) && !isNaN(d)) datesSet.add(formatDate(new Date(year, m - 1, d)));
                 } catch(_) {}
             }
         }
     }
-
     if (datesSet.size === 0) {
-        // Fallback: ±7 days from today with target year
         const base = new Date();
         base.setFullYear(year);
         const result = [];
         for (let i = -7; i <= 7; i++) result.push(formatDate(new Date(base.getTime() + i * 86400000)));
         return result;
     }
-
     return [...datesSet].sort();
 }
 
-// ==========================================
-// Operating Day Check
-// ==========================================
 function isTrainOperating(dateStr, opDayStr) {
     const s = String(opDayStr ?? '').trim();
     if (!s || s === 'null' || s === 'nan' || s === 'undefined') return true;
     if (s.includes('每日')) return true;
-
     const [, mm, dd] = dateStr.split('/').map(Number);
     const selVal = mm * 100 + dd;
-
     const parts = s.replace(/\s/g, '').replace(/[～~]/g, '-').split(',');
     for (const part of parts) {
         if (part.includes('-')) {
@@ -504,11 +642,8 @@ function isTrainOperating(dateStr, opDayStr) {
                 const sv = parseMD(part.slice(0, dash));
                 const ev = parseMD(part.slice(dash + 1));
                 if (isNaN(sv) || isNaN(ev)) continue;
-                if (sv > ev) { // cross-year range
-                    if (selVal >= sv || selVal <= ev) return true;
-                } else {
-                    if (selVal >= sv && selVal <= ev) return true;
-                }
+                if (sv > ev) { if (selVal >= sv || selVal <= ev) return true; }
+                else { if (selVal >= sv && selVal <= ev) return true; }
             } catch(_) {}
         } else {
             const [pm, pd] = part.split('/').map(Number);
@@ -518,9 +653,6 @@ function isTrainOperating(dateStr, opDayStr) {
     return false;
 }
 
-// ==========================================
-// Duration
-// ==========================================
 function calcDuration(tStart, tEnd) {
     const s = timeStrToMins(cellToTimeStr(tStart));
     const e = timeStrToMins(cellToTimeStr(tEnd));
@@ -530,9 +662,6 @@ function calcDuration(tStart, tEnd) {
     return diff;
 }
 
-// ==========================================
-// Load Sheet
-// ==========================================
 function loadSheet(sheetName) {
     if (!workbook) return;
     const ws = workbook.Sheets[sheetName];
@@ -547,190 +676,143 @@ function loadSheet(sheetName) {
 
 function updateStationSelects() {
     const allCols = currentHeaders.filter(h => h && h !== 'null' && h !== 'undefined' && h.trim() !== '');
-
-    let defaultStart = '南港';
-    let defaultEnd = '台南';
+    let defaultStart = '南港', defaultEnd = '台南';
     if (currentSheetName.includes('北上') || currentSheetName.toLowerCase().includes('northbound')) {
-        defaultStart = '台南';
-        defaultEnd = '南港';
+        defaultStart = '台南'; defaultEnd = '南港';
     }
-
     ['startStation', 'endStation'].forEach(id => {
         const sel = document.getElementById(id);
         sel.innerHTML = '';
         allCols.forEach(col => sel.add(new Option(col, col)));
     });
-
-    const startSel = document.getElementById('startStation');
-    const endSel = document.getElementById('endStation');
-
     const sIdx = allCols.findIndex(c => c.includes(defaultStart));
     const eIdx = allCols.findIndex(c => c.includes(defaultEnd));
-    if (sIdx >= 0) startSel.selectedIndex = sIdx;
-    if (eIdx >= 0) endSel.selectedIndex = eIdx;
+    if (sIdx >= 0) document.getElementById('startStation').selectedIndex = sIdx;
+    if (eIdx >= 0) document.getElementById('endStation').selectedIndex = eIdx;
 }
 
 function updateDateSelect() {
     const year = parseInt(document.getElementById('yearInput').value) || new Date().getFullYear();
     const dates = extractValidDates(currentData, currentHeaders, year);
-
     const sel = document.getElementById('dateSelect');
     sel.innerHTML = '';
     dates.forEach(d => sel.add(new Option(d, d)));
-
-    // Select today or first future date
     const todayStr = formatDate(new Date());
     const idx = dates.findIndex(d => d >= todayStr);
     if (idx >= 0) sel.selectedIndex = idx;
 }
 
-// ==========================================
-// Duration Color (green → yellow → red)
-// ==========================================
-function durColor(mins, minDur, maxDur) {
-    const range = Math.max(maxDur - minDur, 1);
-    const ratio = (mins - minDur) / range;
-    let r, g, b;
-    if (ratio <= 0.5) {
-        const t = ratio * 2;
-        r = Math.round(5 + (250 - 5) * t);
-        g = Math.round(150 + (180 - 150) * t);
-        b = Math.round(105 + (20 - 105) * t);
-    } else {
-        const t = (ratio - 0.5) * 2;
-        r = Math.round(250 + (220 - 250) * t);
-        g = Math.round(180 + (40 - 180) * t);
-        b = Math.round(20 + (40 - 20) * t);
-    }
-    return {
-        bg: `rgba(${r},${g},${b},0.15)`,
-        fg: `rgb(${Math.round(r*0.65)},${Math.round(g*0.65)},${Math.round(b*0.65)})`
-    };
+function durStyle(mins) {
+    if (mins <= 80)  return { chip: 'background:#dcfce7;color:#166534', bar: '#22c55e' };
+    if (mins <= 100) return { chip: 'background:#fef3c7;color:#92400e', bar: '#f59e0b' };
+    return               { chip: 'background:#fee2e2;color:#991b1b', bar: '#ef4444' };
 }
 
-// ==========================================
-// Query
-// ==========================================
+function isExpress(trainNo) {
+    const n = parseInt(trainNo);
+    return !isNaN(n) && n < 700;
+}
+
 function runQuery() {
     const startStation = document.getElementById('startStation').value;
     const endStation   = document.getElementById('endStation').value;
     const selectedDate = document.getElementById('dateSelect').value;
     const timeFrom     = document.getElementById('timeFrom').value;
     const timeTo       = document.getElementById('timeTo').value;
-
     const fromMins = timeStrToMins(timeFrom);
     const toMins   = timeStrToMins(timeTo);
-
     const startIdx  = currentHeaders.indexOf(startStation);
     const endIdx    = currentHeaders.indexOf(endStation);
     const trainIdx  = currentHeaders.findIndex(h => h && (h.includes('車次') || h.includes('Train')));
     const dayColIdx = currentHeaders.findIndex(h => h && (h.includes('行駛日') || h.includes('Day')));
-
-    if (startIdx === -1 || endIdx === -1) {
-        showMsg('error', '找不到所選的起訖站欄位，請確認欄位名稱。');
-        return;
-    }
-    if (trainIdx === -1) {
-        showMsg('error', '找不到「車次」欄位，請檢查 Excel 表頭格式。');
-        return;
-    }
-
+    if (startIdx === -1 || endIdx === -1) { showMsg('error', '找不到所選的起訖站欄位，請確認欄位名稱。'); return; }
+    if (trainIdx === -1) { showMsg('error', '找不到「車次」欄位，請檢查 Excel 表頭格式。'); return; }
     const results = [];
-
     for (const row of currentData) {
         if (!row) continue;
-
         const trainNo = row[trainIdx];
         const trainStr = String(trainNo ?? '').trim();
         if (!trainStr || trainStr === 'null' || trainStr === currentHeaders[trainIdx]) continue;
-
-        const tStart = row[startIdx];
-        const tEnd   = row[endIdx];
-        const tStartStr = cellToTimeStr(tStart);
-        const tEndStr   = cellToTimeStr(tEnd);
-
+        const tStart = row[startIdx], tEnd = row[endIdx];
+        const tStartStr = cellToTimeStr(tStart), tEndStr = cellToTimeStr(tEnd);
         if (!tStartStr || !tEndStr) continue;
-
-        // Operating day check
         const opDay = dayColIdx >= 0 && row[dayColIdx] != null ? String(row[dayColIdx]) : '每日';
         if (!isTrainOperating(selectedDate, opDay)) continue;
-
-        // Time range check
         const startMins = timeStrToMins(tStartStr);
         if (startMins === null) continue;
         if (fromMins !== null && startMins < fromMins) continue;
         if (toMins   !== null && startMins > toMins)   continue;
-
-        // Duration check (≤ 120 min only)
         const duration = calcDuration(tStart, tEnd);
         if (duration > 120) continue;
-
         results.push({
             trainNo: trainStr,
-            dep: tStartStr,
-            arr: tEndStr,
-            dur: duration,
+            dep: tStartStr, arr: tEndStr, dur: duration,
             remark: (opDay !== '每日' && !opDay.includes('nan')) ? opDay : ''
         });
     }
-
     results.sort((a, b) => a.dep.localeCompare(b.dep));
     renderResults(results, selectedDate, startStation, endStation);
 }
 
-// ==========================================
-// Render
-// ==========================================
 function renderResults(results, date, from, to) {
     const container = document.getElementById('resultsContainer');
-
     if (results.length === 0) {
-        container.innerHTML = `<div class="card"><div class="alert alert-warning">
-            ⚠️ 找不到符合條件的班次。請嘗試調整日期或時間範圍。
-        </div></div>`;
+        container.innerHTML = `<div class="card"><div class="alert alert-warning">找不到符合條件的班次，請嘗試調整日期或時間範圍。</div></div>`;
         return;
     }
 
-    const minDur = Math.min(...results.map(r => r.dur));
-    const maxDur = Math.max(...results.map(r => r.dur));
-
     const rows = results.map(r => {
-        const c = durColor(r.dur, minDur, maxDur);
-        return `<tr>
-            <td class="train-no">${r.trainNo}</td>
-            <td class="time-val">${r.dep}</td>
-            <td class="time-val">${r.arr}</td>
+        const ds = durStyle(r.dur);
+        const pct = Math.min(100, Math.round(((r.dur - 60) / 60) * 100));
+        const express = isExpress(r.trainNo);
+        const daysChip = r.remark
+            ? `<span class="days-chip special">${r.remark}</span>`
+            : `<span class="days-chip">每日</span>`;
+        return `<tr class="train-row">
+            <td><span class="train-badge ${express ? 'express' : ''}">${r.trainNo}</span></td>
+            <td><span class="time-display">${r.dep}</span></td>
+            <td style="color:#d1d5db;font-size:0.85rem;letter-spacing:-1px;padding:0 4px">──────→</td>
+            <td><span class="time-display">${r.arr}</span></td>
             <td>
-                <span class="dur-pill" style="background:${c.bg};color:${c.fg}">
-                    ${r.dur} 分
-                </span>
+                <div class="dur-wrap">
+                    <span class="dur-chip" style="${ds.chip}">${r.dur} 分</span>
+                    <div class="dur-bar-track">
+                        <div class="dur-bar-fill" style="width:${pct}%;background:${ds.bar}"></div>
+                    </div>
+                </div>
             </td>
-            <td class="remark-text">${r.remark || '每日'}</td>
+            <td>${daysChip}</td>
         </tr>`;
     }).join('');
 
-    container.innerHTML = `<div class="card">
-        <div class="results-header">
+    const [y, mo, d] = date.split('/');
+    const dateDisplay = `${y} 年 ${parseInt(mo)} 月 ${parseInt(d)} 日`;
+
+    container.innerHTML = `<div class="results-board">
+        <div class="board-header">
             <div>
-                <h2>🚅 ${from} → ${to}</h2>
-                <div class="results-subtext">${date} · 直達/快車（行車時間 ≤ 120 分）</div>
+                <div class="board-route">
+                    <span>${from}</span>
+                    <span class="board-route-arrow">→</span>
+                    <span>${to}</span>
+                </div>
+                <div class="board-meta">${dateDisplay} &nbsp;·&nbsp; 直達 / 快車（行車時間 ≤ 120 分）</div>
             </div>
-            <span class="count-badge">${results.length} 班次</span>
+            <span class="board-count">${results.length} 班次</span>
         </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>車次</th>
-                        <th>發車時間</th>
-                        <th>抵達時間</th>
-                        <th>行車時間</th>
-                        <th>行駛日</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-        </div>
+        <table class="train-table">
+            <thead>
+                <tr>
+                    <th>車次</th>
+                    <th>發車</th>
+                    <th></th>
+                    <th>抵達</th>
+                    <th>行車時間</th>
+                    <th>行駛日</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
     </div>`;
 }
 
@@ -739,61 +821,38 @@ function showMsg(type, msg) {
         `<div class="card"><div class="alert alert-${type}">${msg}</div></div>`;
 }
 
-// ==========================================
-// File Handling
-// ==========================================
 function handleFile(file) {
-    if (!file || !file.name.toLowerCase().endsWith('.xlsx')) {
-        alert('請選擇 .xlsx 格式的 Excel 檔案');
-        return;
-    }
-
+    if (!file || !file.name.toLowerCase().endsWith('.xlsx')) { alert('請選擇 .xlsx 格式的 Excel 檔案'); return; }
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             workbook = XLSX.read(e.target.result, { type: 'array', raw: true });
-
             const sheetSel = document.getElementById('sheetSelect');
             sheetSel.innerHTML = '';
             workbook.SheetNames.forEach(name => sheetSel.add(new Option(name, name)));
-
             document.getElementById('yearInput').value = new Date().getFullYear();
             loadSheet(workbook.SheetNames[0]);
-
             document.getElementById('mainLayout').classList.remove('hidden');
-
-            // Update upload zone to show loaded state
-            const zone = document.getElementById('uploadZone');
-            zone.innerHTML = `
-                <div class="file-loaded-info">✅ ${file.name}</div>
-                <p style="font-size:0.82rem;color:var(--muted)">點擊此處更換檔案</p>`;
-
-        } catch(err) {
-            alert('讀取 Excel 失敗：' + err.message);
-        }
+            document.getElementById('uploadZone').innerHTML = `
+                <div class="file-loaded">
+                    <div class="file-loaded-dot"></div>
+                    ${file.name}
+                </div>
+                <p style="font-size:0.8rem;color:var(--muted)">點擊更換檔案</p>`;
+        } catch(err) { alert('讀取 Excel 失敗：' + err.message); }
     };
     reader.readAsArrayBuffer(file);
 }
 
-// Wire up upload zone click → file input
-document.getElementById('uploadZone').addEventListener('click', () => {
-    document.getElementById('fileInput').click();
-});
-document.getElementById('uploadBtn').addEventListener('click', e => {
-    e.stopPropagation();
-    document.getElementById('fileInput').click();
-});
-
-document.getElementById('fileInput').addEventListener('change', e => {
-    if (e.target.files[0]) handleFile(e.target.files[0]);
-});
+document.getElementById('uploadZone').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('uploadBtn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('fileInput').click(); });
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
 const zone = document.getElementById('uploadZone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
 zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
 zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('dragover');
+    e.preventDefault(); zone.classList.remove('dragover');
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
@@ -801,7 +860,6 @@ document.getElementById('sheetSelect').addEventListener('change', function() {
     loadSheet(this.value);
     showMsg('info', '已切換工作表，請點擊「查詢班次」重新查詢。');
 });
-
 document.getElementById('yearInput').addEventListener('change', updateDateSelect);
 </script>
 
