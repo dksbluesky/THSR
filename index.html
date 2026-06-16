@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚅🚅高鐵連假時刻查詢</title>
+    <title>高鐵連假時刻查詢</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="高鐵時刻">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" id="appIcon" href="">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -896,6 +901,26 @@ document.getElementById('sheetSelect').addEventListener('change', function() {
     showMsg('info', '已切換工作表，請點擊「查詢班次」重新查詢。');
 });
 document.getElementById('yearInput').addEventListener('change', updateDateSelect);
+
+(function() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 180;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    const r = 36, s = 180;
+    ctx.moveTo(r, 0); ctx.lineTo(s-r, 0); ctx.quadraticCurveTo(s, 0, s, r);
+    ctx.lineTo(s, s-r); ctx.quadraticCurveTo(s, s, s-r, s);
+    ctx.lineTo(r, s); ctx.quadraticCurveTo(0, s, 0, s-r);
+    ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = '110px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🚅', 90, 98);
+    document.getElementById('appIcon').href = c.toDataURL();
+})();
 </script>
 
 </body>
