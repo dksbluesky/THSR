@@ -298,6 +298,21 @@
             border: 1px solid #fecaca;
         }
 
+        .dir-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+        .dir-badge.southbound { background: #dbeafe; color: #1d4ed8; }
+        .dir-badge.northbound { background: #fef3c7; color: #92400e; }
+
         /* ── Results ── */
         .results-board {
             background: var(--card);
@@ -468,7 +483,7 @@
                     時刻表設定
                 </div>
                 <div class="form-group">
-                    <label>工作表（方向）</label>
+                    <label>工作表（方向）<span id="dirBadge" class="dir-badge hidden"></span></label>
                     <select id="sheetSelect"></select>
                 </div>
                 <div class="form-group">
@@ -676,9 +691,17 @@ function loadSheet(sheetName) {
 
 function updateStationSelects() {
     const allCols = currentHeaders.filter(h => h && h !== 'null' && h !== 'undefined' && h.trim() !== '');
+    const isNorthbound = currentSheetName.includes('北上') || currentSheetName.toLowerCase().includes('northbound');
     let defaultStart = '南港', defaultEnd = '台南';
-    if (currentSheetName.includes('北上') || currentSheetName.toLowerCase().includes('northbound')) {
-        defaultStart = '台南'; defaultEnd = '南港';
+    if (isNorthbound) { defaultStart = '台南'; defaultEnd = '南港'; }
+
+    const badge = document.getElementById('dirBadge');
+    if (isNorthbound) {
+        badge.className = 'dir-badge northbound';
+        badge.textContent = '↑ 北上';
+    } else {
+        badge.className = 'dir-badge southbound';
+        badge.textContent = '↓ 南下';
     }
     ['startStation', 'endStation'].forEach(id => {
         const sel = document.getElementById(id);
